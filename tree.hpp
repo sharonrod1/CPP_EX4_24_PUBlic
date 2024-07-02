@@ -22,9 +22,10 @@ using namespace std;
 template<typename T>
 class Tree {
 private:
-    Node<T>* root;
-    unsigned int max_neighbors;
+    Node<T>* root;  // Pointer to the root node
+    unsigned int max_neighbors;  // Max number of neighbors (children) per node
 
+    // Performs Depth-First Search (DFS) to detect cycles
     bool dfs(Node<T>* node, unordered_set<int>& visited) {
         visited.insert(node->id);
         for (Node<T>* neighbor : node->neighbors) {
@@ -38,14 +39,12 @@ private:
         return false;
     }
 
+    // Recursively heapifies the tree
     void heapify(Node<T>* node) {
         if (node == nullptr) return;
-        // Recursively heapify all children
         for (Node<T>* child : node->neighbors) {
             heapify(child);
         }
-
-        // Fix the min-heap property if it's violated
         for (Node<T>* child : node->neighbors) {
             if (child->data < node->data) {
                 swap(child->data, node->data);
@@ -54,26 +53,32 @@ private:
         }
     }
 
-   void deleteTree(Node<T>* node) {
+    // Deletes all nodes in the tree
+    void deleteTree(Node<T>* node) {
         if (node == nullptr) return;
         for (Node<T>* neighbor : node->neighbors) {
             deleteTree(neighbor);
         }
-        
         node->neighbors.clear();
-        delete node; // Actually delete the node
+        delete node;
     }
 
 public:
+    // Constructor to initialize tree with max neighbors
     Tree(int maxNeighbors = 2) : root(nullptr), max_neighbors(maxNeighbors) {}
+
+    // Destructor to delete all nodes in the tree
     ~Tree() {
         deleteTree(root);
         root = nullptr;
     }
-    double getNeighboursSize(Node<T>* node){
+
+    // Gets the number of neighbors for a node
+    double getNeighboursSize(Node<T>* node) {
         return node->neighbors.size();
     }
 
+    // Adds a root node to the tree
     void add_root(Node<T>* node) {
         if (root == nullptr) {
             root = node;
@@ -82,10 +87,12 @@ public:
         }
     }
 
+    // Gets the root node of the tree
     Node<T>* getRoot() {
         return root;
     }
 
+    // Adds a sub-node to a parent node
     void add_sub_node(Node<T>* parent, Node<T>* child) {
         if (parent->neighbors.size() < max_neighbors && child->neighbors.size() < max_neighbors) {
             parent->neighbors.push_back(child);
@@ -101,17 +108,20 @@ public:
         }
     }
 
+    // Checks if the tree contains a cycle
     bool containsCycle() {
         if (root == nullptr) return false;
         unordered_set<int> visited;
         return dfs(root, visited);
     }
 
+    // Overloaded output operator to print the tree
     friend ostream& operator<<(ostream& os, Tree<T>& tree) {
         tree.printTree();
         return os;
     }
 
+    // Prints the tree using a graphical interface
     void printTree() {
         QMainWindow window;
         QGraphicsView view(&window);
@@ -125,7 +135,8 @@ public:
         QApplication::exec();
     }
 
-     void drawTree(QGraphicsScene *scene, Node<T> *node, double x, double y, double xOffset) {
+    // Draws the tree on the scene
+    void drawTree(QGraphicsScene *scene, Node<T> *node, double x, double y, double xOffset) {
         if (!node) return;
 
         QGraphicsEllipseItem *circle = scene->addEllipse(0, 0, 70, 70); // Larger circles for Complex type
@@ -143,6 +154,7 @@ public:
         }
     }
 
+    // Iterator for Min-Heap traversal
     class MinHeapIterator {
     private:
         queue<Node<T>*> nodeQueue;
@@ -159,10 +171,10 @@ public:
             }
         }
 
+        // Builds the min-heap
         void buildMinHeap(Node<T>* node) {
             if (node == nullptr) return;
 
-            // Using a min-heap priority queue to store nodes
             priority_queue<Node<T>*, vector<Node<T>*>, function<bool(Node<T>*, Node<T>*)>> pq(
                 [](Node<T>* a, Node<T>* b) { return a->data > b->data; });
 
@@ -187,7 +199,6 @@ public:
         bool operator!=(const MinHeapIterator& other) const {
             return current != other.current;
         }
-        
 
         Node<T>* operator->() {
             return current;
@@ -208,6 +219,7 @@ public:
         }
     };
 
+    // Returns a MinHeapIterator for the tree
     MinHeapIterator myHeap() {
         if (max_neighbors != 2) {
             cout << "Heapify only works for binary trees." << endl;
@@ -216,6 +228,7 @@ public:
         return MinHeapIterator(root);
     }
 
+    // Iterator for Pre-Order traversal
     class IteratorPreOrder {
     private:
         stack<Node<T>*> nodeStack;
@@ -236,10 +249,6 @@ public:
             return current != other.current;
         }
 
-        bool contains(const unordered_set<int>& s, int v) {
-            return s.find(v) != s.end();
-        }
-
         IteratorPreOrder& operator++() {
             if (nodeStack.empty()) {
                 current = nullptr;
@@ -249,20 +258,10 @@ public:
             current = nodeStack.top();
             nodeStack.pop();
 
-            if (tree->max_neighbors == 2) {
-                for (auto it = current->neighbors.rbegin(); it != current->neighbors.rend(); ++it) {
-                    if (visited.find((*it)->id) == visited.end()) {
-                        nodeStack.push(*it);
-                        visited.insert((*it)->id);
-                    }
-                }
-            } else {
-                for (auto it = current->neighbors.rbegin(); it != current->neighbors.rend(); ++it) {
-                    auto neighbor = *it;
-                    if (!contains(visited, neighbor->id)) {
-                        nodeStack.push(neighbor);
-                        visited.insert(neighbor->id);
-                    }
+            for (auto it = current->neighbors.rbegin(); it != current->neighbors.rend(); ++it) {
+                if (visited.find((*it)->id) == visited.end()) {
+                    nodeStack.push(*it);
+                    visited.insert((*it)->id);
                 }
             }
 
@@ -280,18 +279,21 @@ public:
         }
     };
 
+    // Returns the beginning of Pre-Order traversal
     IteratorPreOrder begin_pre_order() {
         return IteratorPreOrder(this, root);
     }
 
+    // Returns the end of Pre-Order traversal
     IteratorPreOrder end_pre_order() {
         return IteratorPreOrder(this, nullptr);
     }
 
+    // Iterator for Post-Order traversal
     class IteratorPostOrder {
     private:
-        stack<Node<T>*> traversalStack; // the stack that will be used to traverse the tree
-        stack<Node<T>*> processingStack; // the final stack that will be used to iterate
+        stack<Node<T>*> traversalStack; // Stack used to traverse the tree
+        stack<Node<T>*> processingStack; // Stack used for iteration
         unordered_set<int> visited;
         Tree<T>* tree;
         Node<T>* current;
@@ -302,7 +304,7 @@ public:
                 traversalStack.pop();
                 processingStack.push(node);
                 for (auto neighbor : node->neighbors) {
-                    if (visited.find(neighbor->id) == visited.end()) { // Only nodes that have not been visited
+                    if (visited.find(neighbor->id) == visited.end()) {
                         traversalStack.push(neighbor);
                         visited.insert(neighbor->id);
                     }
@@ -331,14 +333,6 @@ public:
             return current != other.current;
         }
 
-        bool contains(const unordered_set<int>& s, int v) {
-            return s.find(v) != s.end();
-        }
-
-        Node<T>* operator->() {
-            return current;
-        }
-
         IteratorPostOrder& operator++() {
             if (tree->max_neighbors != 2) {
                 if (!processingStack.empty()) {
@@ -346,7 +340,7 @@ public:
                     processingStack.pop();
                     for (auto it = current->neighbors.rbegin(); it != current->neighbors.rend(); ++it) {
                         auto neighbor = *it;
-                        if (!contains(visited, neighbor->id)) {
+                        if (visited.find(neighbor->id) == visited.end()) {
                             processingStack.push(neighbor);
                             visited.insert(neighbor->id);
                         }
@@ -371,16 +365,23 @@ public:
             }
             return *this;
         }
+
+        Node<T>* operator->() {
+            return current;
+        }
     };
 
+    // Returns the beginning of Post-Order traversal
     IteratorPostOrder begin_post_order() {
         return IteratorPostOrder(this, root);
     }
 
+    // Returns the end of Post-Order traversal
     IteratorPostOrder end_post_order() {
         return IteratorPostOrder(this, nullptr);
     }
 
+    // Iterator for In-Order traversal
     class IteratorInOrder {
     private:
         stack<Node<T>*> nodeStack;
@@ -415,14 +416,6 @@ public:
             return current != other.current;
         }
 
-        bool contains(const unordered_set<int>& s, int v) {
-            return s.find(v) != s.end();
-        }
-
-        Node<T>* operator->() {
-            return current;
-        }
-
         IteratorInOrder& operator++() {
             if (tree->max_neighbors != 2) {
                 if (!nodeStack.empty()) {
@@ -430,7 +423,7 @@ public:
                     nodeStack.pop();
                     for (auto it = current->neighbors.rbegin(); it != current->neighbors.rend(); ++it) {
                         auto neighbor = *it;
-                        if (!contains(visited, neighbor->id)) {
+                        if (visited.find(neighbor->id) == visited.end()) {
                             nodeStack.push(neighbor);
                             visited.insert(neighbor->id);
                         }
@@ -463,16 +456,23 @@ public:
         Node<T>& operator*() {
             return *current;
         }
+
+        Node<T>* operator->() {
+            return current;
+        }
     };
 
+    // Returns the beginning of In-Order traversal
     IteratorInOrder begin_in_order() {
         return IteratorInOrder(this, root);
     }
 
+    // Returns the end of In-Order traversal
     IteratorInOrder end_in_order() {
         return IteratorInOrder(this, nullptr);
     }
 
+    // Iterator for Breadth-First Search (BFS)
     class BfsScan {
     private:
         queue<Node<T>*> nodeQueue;
@@ -524,22 +524,27 @@ public:
         }
     };
 
+    // Returns the beginning of BFS traversal
     BfsScan begin_bfs_scan() {
         return BfsScan(this, root);
     }
 
+    // Returns the end of BFS traversal
     BfsScan end_bfs_scan() {
         return BfsScan(this, nullptr);
     }
 
+    // Returns the beginning of BFS traversal (default)
     BfsScan begin() {
         return BfsScan(this, root);
     }
 
+    // Returns the end of BFS traversal (default)
     BfsScan end() {
         return BfsScan(this, nullptr);
     }
 
+    // Iterator for Depth-First Search (DFS)
     class dfsScan {
     private:
         stack<Node<T>*> nodeStack;
@@ -560,7 +565,7 @@ public:
             return current != other.current;
         }
 
-        Node<T>* operator->() {
+        Node<T>* operator->(){
             return current;
         }
 
